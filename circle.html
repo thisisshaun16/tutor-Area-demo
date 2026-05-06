@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>固定周長與面積變化互動工具</title>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --secondary: #10b981;
+            --secondary-dark: #059669;
+            --bg-color: #f8fafc;
+            --panel-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .widget-container {
+            background-color: var(--panel-bg);
+            max-width: 800px;
+            width: 100%;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            box-sizing: border-box;
+        }
+
+        h2 {
+            text-align: center;
+            margin-top: 0;
+            color: var(--text-main);
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 15px;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin-bottom: 25px;
+            background: #f1f5f9;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .slider-group label {
+            font-weight: 600;
+            min-width: 140px;
+        }
+
+        input[type=range] {
+            flex-grow: 1;
+            cursor: pointer;
+        }
+
+        .toggle-group {
+            display: flex;
+            align-items: center;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .toggle-group input {
+            margin-right: 10px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .stats-panel {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: #eff6ff;
+            border-left: 4px solid var(--primary);
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .stat-card.circle-stat {
+            background: #ecfdf5;
+            border-left: 4px solid var(--secondary);
+            display: none; /* Hidden by default */
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: var(--primary-dark);
+        }
+
+        .circle-stat .stat-value {
+            color: var(--secondary-dark);
+        }
+
+        .visual-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .svg-box {
+            width: 100%;
+            height: 280px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            background-color: #f8fafc;
+        }
+
+        .label-text { font-size: 14px; font-family: sans-serif; }
+        .axis-text { font-size: 12px; fill: #64748b; }
+    </style>
+</head>
+<body>
+
+<div class="widget-container">
+    <h2>固定周長與面積變化 (周長 = 40)</h2>
+    
+    <div class="controls">
+        <div class="slider-group">
+            <label for="widthSlider">調整長方形寬度: <span id="widthLabel" style="color:var(--primary-dark)">10.0</span></label>
+            <input type="range" id="widthSlider" min="0.1" max="19.9" step="0.1" value="10.0">
+        </div>
+        <label class="toggle-group">
+            <input type="checkbox" id="circleToggle">
+            對比相同周長的圓形
+        </label>
+    </div>
+
+    <div class="stats-panel" id="statsPanel">
+        <div class="stat-card">
+            <div class="stat-label">目前高度</div>
+            <div class="stat-value" id="heightVal">10.0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">長方形面積</div>
+            <div class="stat-value" id="rectAreaVal">100.0</div>
+        </div>
+        <div class="stat-card circle-stat" id="circleStat">
+            <div class="stat-label">圓形面積 (固定)</div>
+            <div class="stat-value">127.3</div>
+        </div>
+    </div>
+
+    <div class="visual-container">
+        <!-- 幾何圖形顯示區 -->
+        <svg class="svg-box" id="shapeSvg" viewBox="0 0 500 250">
+            <!-- 網格線 -->
+            <g stroke="#e2e8f0" stroke-width="1">
+                <line x1="250" y1="0" x2="250" y2="250" stroke-dasharray="4" />
+                <line x1="0" y1="125" x2="500" y2="125" stroke-dasharray="4" />
+            </g>
+            
+            <!-- 圓形 (預設隱藏) -->
+            <g id="circleGroup" style="display: none;">
+                <!-- 半徑 r = 40 / 2π = 6.366 單位 (放大的比例跟長方形一樣，1單位 = 10px) -->
+                <!-- r = 63.66 px -->
+                <circle cx="250" cy="125" r="63.66" fill="rgba(16, 185, 129, 0.2)" stroke="#10b981" stroke-width="2" stroke-dasharray="5"/>
+                <text x="250" y="125" text-anchor="middle" dominant-baseline="middle" fill="#059669" class="label-text">圓形面積: ~127.3</text>
+            </g>
+
+            <!-- 長方形 -->
+            <g id="rectGroup">
+                <rect id="dynamicRect" x="150" y="25" width="200" height="200" fill="rgba(59, 130, 246, 0.4)" stroke="#2563eb" stroke-width="2" />
+                <text id="rectAreaText" x="250" y="125" text-anchor="middle" dominant-baseline="middle" fill="#1e3a8a" class="label-text font-bold">面積: 100.0</text>
+            </g>
+        </svg>
+
+        <!-- 面積函數座標圖區 -->
+        <svg class="svg-box" id="graphSvg" viewBox="0 0 500 250">
+            <!-- 座標軸 -->
+            <line x1="50" y1="210" x2="480" y2="210" stroke="#94a3b8" stroke-width="2" /> <!-- X軸 -->
+            <line x1="50" y1="210" x2="50" y2="20" stroke="#94a3b8" stroke-width="2" />  <!-- Y軸 -->
+            
+            <!-- 刻度與文字 -->
+            <text x="460" y="235" class="axis-text">寬度 (X)</text>
+            <text x="10" y="30" class="axis-text">面積 (Y)</text>
+            
+            <!-- X軸標示 (0, 10, 20) -->
+            <text x="50" y="230" text-anchor="middle" class="axis-text">0</text>
+            <text x="250" y="230" text-anchor="middle" class="axis-text">10 (正方形)</text>
+            <text x="450" y="230" text-anchor="middle" class="axis-text">20</text>
+            
+            <!-- Y軸標示 (0, 100, 127) -->
+            <text x="40" y="210" text-anchor="end" class="axis-text">0</text>
+            <text x="40" y="55" text-anchor="end" class="axis-text">100</text>
+            
+            <!-- 圓形最高面積參考線 -->
+            <g id="circleLineGraph" style="display: none;">
+                <line x1="50" y1="12.5" x2="480" y2="12.5" stroke="#10b981" stroke-width="1.5" stroke-dasharray="4"/>
+                <text x="480" y="10" text-anchor="end" fill="#059669" class="axis-text">圓形面積: ~127.3</text>
+            </g>
+
+            <!-- 拋物線路徑 -->
+            <path id="parabolaPath" fill="none" stroke="#cbd5e1" stroke-width="3" />
+            <!-- 已走過的拋物線 -->
+            <path id="parabolaActive" fill="none" stroke="#3b82f6" stroke-width="3" />
+
+            <!-- 輔助對齊線 -->
+            <line id="guideX" x1="250" y1="55" x2="250" y2="210" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4" />
+            <line id="guideY" x1="50" y1="55" x2="250" y2="55" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4" />
+
+            <!-- 當前標記點 -->
+            <circle id="graphMarker" cx="250" cy="55" r="6" fill="#ef4444" stroke="#ffffff" stroke-width="2" />
+        </svg>
+    </div>
+</div>
+
+<script>
+    // DOM 元素
+    const slider = document.getElementById('widthSlider');
+    const toggle = document.getElementById('circleToggle');
+    const widthLabel = document.getElementById('widthLabel');
+    const heightVal = document.getElementById('heightVal');
+    const rectAreaVal = document.getElementById('rectAreaVal');
+    
+    // 圖形 DOM
+    const dynamicRect = document.getElementById('dynamicRect');
+    const rectAreaText = document.getElementById('rectAreaText');
+    const circleGroup = document.getElementById('circleGroup');
+    const circleStat = document.getElementById('circleStat');
+    const circleLineGraph = document.getElementById('circleLineGraph');
+    
+    // 圖表 DOM
+    const parabolaPath = document.getElementById('parabolaPath');
+    const parabolaActive = document.getElementById('parabolaActive');
+    const graphMarker = document.getElementById('graphMarker');
+    const guideX = document.getElementById('guideX');
+    const guideY = document.getElementById('guideY');
+
+    // 繪圖設定參數
+    const SCALE = 10; // 1單位 = 10px (形狀圖)
+    const CX = 250;   // 畫布中心X
+    const CY = 125;   // 畫布中心Y
+    
+    // 函數系數 (圖表)
+    // X範圍: 0 到 20 對應畫布 50 到 450 (寬度 400)，比例 400/20 = 20
+    // Y範圍: 0 到 130 對應畫布 210 到 10 (高度 200)，比例 200/130 ≈ 1.538
+    const graphOriginX = 50;
+    const graphOriginY = 210;
+    const scaleX = 20;
+    const scaleY = 200 / 130;
+
+    function initGraph() {
+        let pathD = "M ";
+        // 預先計算完整的拋物線軌跡 y = x * (20 - x)
+        for (let w = 0; w <= 20; w += 0.2) {
+            let area = w * (20 - w);
+            let px = graphOriginX + w * scaleX;
+            let py = graphOriginY - area * scaleY;
+            pathD += `${px},${py} `;
+        }
+        parabolaPath.setAttribute('d', pathD);
+    }
+
+    function update() {
+        const w = parseFloat(slider.value);
+        const h = 20 - w;
+        const area = w * h;
+
+        // 更新文字面板
+        widthLabel.textContent = w.toFixed(1);
+        heightVal.textContent = h.toFixed(1);
+        rectAreaVal.textContent = area.toFixed(1);
+
+        // 更新長方形圖形 (置中繪製)
+        const rectWidthPx = w * SCALE;
+        const rectHeightPx = h * SCALE;
+        dynamicRect.setAttribute('width', rectWidthPx);
+        dynamicRect.setAttribute('height', rectHeightPx);
+        dynamicRect.setAttribute('x', CX - rectWidthPx / 2);
+        dynamicRect.setAttribute('y', CY - rectHeightPx / 2);
+        rectAreaText.textContent = `面積: ${area.toFixed(1)}`;
+
+        // 更新座標圖標記與軌跡
+        const currentPx = graphOriginX + w * scaleX;
+        const currentPy = graphOriginY - area * scaleY;
+
+        graphMarker.setAttribute('cx', currentPx);
+        graphMarker.setAttribute('cy', currentPy);
+        
+        guideX.setAttribute('x1', currentPx);
+        guideX.setAttribute('x2', currentPx);
+        guideX.setAttribute('y1', currentPy);
+        
+        guideY.setAttribute('x2', currentPx);
+        guideY.setAttribute('y1', currentPy);
+        guideY.setAttribute('y2', currentPy);
+
+        // 繪製從0到當前寬度的活躍軌跡
+        let activePathD = "M ";
+        for (let i = 0; i <= w; i += 0.2) {
+            let a = i * (20 - i);
+            let px = graphOriginX + i * scaleX;
+            let py = graphOriginY - a * scaleY;
+            activePathD += `${px},${py} `;
+        }
+        activePathD += `${currentPx},${currentPy}`; // 確保連到確切終點
+        parabolaActive.setAttribute('d', activePathD);
+    }
+
+    function toggleCircle() {
+        const isChecked = toggle.checked;
+        circleGroup.style.display = isChecked ? 'block' : 'none';
+        circleStat.style.display = isChecked ? 'block' : 'none';
+        circleLineGraph.style.display = isChecked ? 'block' : 'none';
+    }
+
+    // 事件監聽
+    slider.addEventListener('input', update);
+    toggle.addEventListener('change', toggleCircle);
+
+    // 初始執行
+    initGraph();
+    update();
+</script>
+
+</body>
+</html>
